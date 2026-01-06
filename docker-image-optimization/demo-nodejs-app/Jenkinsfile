@@ -1,39 +1,59 @@
 pipeline {
-agent any
-environment {
-IMAGE_NAME = "myapp"
-CONTAINER_NAME = "myapp_container"
-PORT = "3000"
-}
-stages {
-stage('Checkout Code') {
-steps {
-checkout scm
-}
-}
-stage('Build Docker Image') {
-steps {
-sh """
-docker build -t ${IMAGE_NAME}:latest .
-"""
-}
-}
-stage('Deploy App on macOS') {
-steps {
-sh """
-docker stop ${CONTAINER_NAME} || true
-docker rm ${CONTAINER_NAME} || true
-docker run -d \
---name ${CONTAINER_NAME} \
--p ${PORT}:${PORT} \
-${IMAGE_NAME}:latest
-"""
-}
-}
-}
-post {
-success {
-echo "App deployed successfully 🎉"
-}
-}
+    agent any
+    environment {
+        IMAGE_NAME = "myapp"
+        CONTAINER_NAME = "myapp_container"
+        PORT = "3000"
+        PATH = "/usr/local/bin:/opt/homebrew/opt/openjdk@21/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+    }
+    stages {
+
+        stage('Verify Environment') {
+            steps {
+                echo "Verifying Docker and Java installation..."
+                sh 'which docker'
+                sh 'docker --version'
+                sh 'which java'
+                sh 'java -version'
+            }
+        }
+
+        stage('Checkout Code') {
+            steps {
+                echo "Checking out source code..."
+                checkout scm
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                echo "Building Docker image..."
+                sh """
+                    docker build -t ${IMAGE_NAME}:latest .
+                """
+            }
+        }
+
+        stage('Deploy App on macOS') {
+            steps {
+                echo "Deploying Docker container..."
+                sh """
+                    docker stop ${CONTAINER_NAME} || true
+                    docker rm ${CONTAINER_NAME} || true
+                    docker run -d \\
+                        --name ${CONTAINER_NAME} \\
+                        -p ${PORT}:${PORT} \\
+                        ${IMAGE_NAME}:latest
+                """
+            }
+        }
+    }
+    post {
+        success {
+            echo "🎉 App deployed successfully!"
+        }
+        failure {
+            echo "❌ Build or deploy failed. Check logs!"
+        }
+    }
 }
