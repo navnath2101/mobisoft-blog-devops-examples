@@ -2,29 +2,31 @@ pipeline {
   agent any
 
   environment {
-    AWS_REGION = "ap-south-1"
-    ECR_REPO = "ACCOUNT_ID.dkr.ecr.ap-south-1.amazonaws.com/myapp"
+    AWS_REGION = 'us-east-1'
+    ACCOUNT_ID = '875478187294'   // replace
+    ECR_REPO = "${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/myapp"
+    IMAGE_NAME = 'myapp'
   }
 
   stages {
 
-    stage('Clone Code') {
+    stage('Checkout Code') {
       steps {
-        git 'https://github.com/navnath2101/mobisoft-blog-devops-examples.git'
+        checkout scm
       }
     }
 
     stage('Build Docker Image') {
       steps {
-        sh 'docker build -t myapp .'
+        sh 'docker build -t ${IMAGE_NAME}:latest .'
       }
     }
 
     stage('Login to ECR') {
       steps {
         sh '''
-        aws ecr get-login-password --region $AWS_REGION |
-        docker login --username AWS --password-stdin $ECR_REPO
+          aws ecr get-login-password --region ${AWS_REGION} | \
+          docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
         '''
       }
     }
@@ -32,8 +34,8 @@ pipeline {
     stage('Push Image') {
       steps {
         sh '''
-        docker tag myapp:latest $ECR_REPO:latest
-        docker push $ECR_REPO:latest
+          docker tag ${IMAGE_NAME}:latest ${ECR_REPO}:latest
+          docker push ${ECR_REPO}:latest
         '''
       }
     }
