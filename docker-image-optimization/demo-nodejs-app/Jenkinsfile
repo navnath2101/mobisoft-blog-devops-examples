@@ -18,8 +18,10 @@ pipeline {
 
     stage('Build Docker Image') {
       steps {
+        dir('docker-image-optimization/demo-nodejs-app') {
         sh 'docker build -t ${IMAGE_NAME}:latest .'
       }
+    }
     }
 
     stage('Login to ECR') {
