@@ -41,9 +41,7 @@ pipeline {
         '''
       }
     }
-  }
-}
-stage('Deploy Container') {
+    stage('Deploy Container') {
   steps {
     sh '''
       docker stop myapp || true
@@ -56,5 +54,8 @@ stage('Deploy Container') {
         -p 3000:3000 \
         ${ECR_REPO}:latest
     '''
+  }
+}
+
   }
 }
