@@ -1,59 +1,41 @@
 pipeline {
-    agent any
-    environment {
-        IMAGE_NAME = "myapp"
-        CONTAINER_NAME = "myapp_container"
-        PORT = "3000"
-        PATH = "/usr/local/bin:/opt/homebrew/opt/openjdk@21/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+  agent any
+
+  environment {
+    AWS_REGION = "ap-south-1"
+    ECR_REPO = "ACCOUNT_ID.dkr.ecr.ap-south-1.amazonaws.com/myapp"
+  }
+
+  stages {
+
+    stage('Clone Code') {
+      steps {
+        git 'https://github.com/navnath2101/mobisoft-blog-devops-examples.git'
+      }
     }
-    stages {
 
-        stage('Verify Environment') {
-            steps {
-                echo "Verifying Docker and Java installation..."
-                sh 'which docker'
-                sh 'docker --version'
-                sh 'which java'
-                sh 'java -version'
-            }
-        }
-
-        stage('Checkout Code') {
-            steps {
-                echo "Checking out source code..."
-                checkout scm
-            }
-        }
-
-        stage('Build Docker Image') {
-            steps {
-                echo "Building Docker image..."
-                sh """
-                    docker build -t ${IMAGE_NAME}:latest .
-                """
-            }
-        }
-
-        stage('Deploy App on macOS') {
-            steps {
-                echo "Deploying Docker container..."
-                sh """
-                    docker stop ${CONTAINER_NAME} || true
-                    docker rm ${CONTAINER_NAME} || true
-                    docker run -d \\
-                        --name ${CONTAINER_NAME} \\
-                        -p ${PORT}:${PORT} \\
-                        ${IMAGE_NAME}:latest
-                """
-            }
-        }
+    stage('Build Docker Image') {
+      steps {
+        sh 'docker build -t myapp .'
+      }
     }
-    post {
-        success {
-            echo "🎉 App deployed successfully!"
-        }
-        failure {
-            echo "❌ Build or deploy failed. Check logs!"
-        }
+
+    stage('Login to ECR') {
+      steps {
+        sh '''
+        aws ecr get-login-password --region $AWS_REGION |
+        docker login --username AWS --password-stdin $ECR_REPO
+        '''
+      }
     }
+
+    stage('Push Image') {
+      steps {
+        sh '''
+        docker tag myapp:latest $ECR_REPO:latest
+        docker push $ECR_REPO:latest
+        '''
+      }
+    }
+  }
 }
